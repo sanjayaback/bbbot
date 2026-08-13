@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from redis import Redis
-from rq import Queue
+from rq import Queue, Retry
 from apps.api.config import settings
 from apps.api.db import get_db
 from apps.api.security import Principal, current_principal, require_workspace_role
@@ -48,7 +48,7 @@ async def upload_document(request: Request, workspace_id:str=Form(...), knowledg
     await db.execute(text("INSERT INTO usage_events(workspace_id,user_id,operation,storage_bytes) VALUES(:w,:u,'document_upload',:z)"),{"w":workspace_id,"u":p.user_id,"z":len(raw)})
     await write_audit(db,workspace_id=workspace_id,actor_user_id=p.user_id,action="document.uploaded",resource_type="document",resource_id=doc_id,request_id=request.state.request_id,ip=request.client.host if request.client else None,metadata={"filename":safe_name,"size":len(raw)})
     await db.commit()
-    Queue("docuquery", connection=Redis.from_url(settings.redis_url)).enqueue("apps.worker.tasks.ingest_document", job_id, retry=3, job_timeout=1800)
+    Queue("docuquery", connection=Redis.from_url(settings.redis_url)).enqueue("apps.worker.tasks.ingest_document", job_id, retry=Retry(max=3), job_timeout=1800)
     return {"document_id":doc_id,"version_id":ver_id,"job_id":job_id,"status":"queued"}
 
 
