@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docuquery"
+version = "1.0.0"
+description = "Multi-tenant document intelligence platform with grounded RAG and verifiable citations"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.116",
+  "uvicorn[standard]>=0.35",
+  "sqlalchemy[asyncio]>=2.0.41",
+  "asyncpg>=0.30",
+  "alembic>=1.16",
+  "pydantic-settings>=2.10",
+  "python-multipart>=0.0.20",
+  "python-jose[cryptography]>=3.5",
+  "httpx>=0.28",
+  "redis>=6.2",
+  "rq>=2.5",
+  "PyMuPDF>=1.26",
+  "python-docx>=1.2",
+  "cryptography>=45",
+  "google-genai>=1.31",
+  "pgvector>=0.4",
+  "python-magic>=0.4.27; platform_system != 'Windows'",
+  "structlog>=25.4",
+]
+
+[project.optional-dependencies]
+ocr = ["pytesseract>=0.3.13", "Pillow>=11.0"]
+dev = ["pytest>=8.4", "pytest-asyncio>=1.1", "ruff>=0.12", "mypy>=1.17"]
+
+[tool.setuptools.packages.find]
+include = ["apps*", "packages*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110

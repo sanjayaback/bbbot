@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>DocuQuery — Document Intelligence</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="toast" class="toast hidden"></div>
+
+  <section id="authScreen" class="auth-screen hidden">
+    <div class="auth-card">
+      <div class="brand large"><span>DQ</span><div><b>DocuQuery</b><small>Document Intelligence</small></div></div>
+      <h1>Ask your documents with evidence.</h1>
+      <p>Secure workspaces, governed knowledge bases, hybrid retrieval and verifiable citations.</p>
+      <div class="tabs"><button data-auth-tab="signin" class="active">Sign in</button><button data-auth-tab="signup">Create account</button></div>
+      <form id="authForm">
+        <label>Email<input id="authEmail" type="email" required autocomplete="email" placeholder="you@company.com"></label>
+        <label>Password<input id="authPassword" type="password" required minlength="6" autocomplete="current-password" placeholder="••••••••"></label>
+        <button id="authSubmit" class="primary" type="submit">Sign in</button>
+      </form>
+      <small id="authHint" class="muted"></small>
+    </div>
+  </section>
+
+  <div id="appShell" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="brand"><span>DQ</span><div><b>DocuQuery</b><small>Intelligence</small></div></div>
+      <div class="workspace-picker"><small>WORKSPACE</small><select id="workspaceSelect"></select><button id="newWorkspaceBtn" class="icon-btn" title="New workspace">＋</button></div>
+      <nav id="nav">
+        <button data-view="dashboard" class="active">Dashboard</button>
+        <button data-view="knowledge">Knowledge</button>
+        <button data-view="chat">Chat</button>
+        <button data-view="activity">Activity</button>
+        <button data-view="settings">Settings</button>
+      </nav>
+      <div class="sidebar-bottom"><div id="userEmail" class="user-email"></div><button id="signOutBtn" class="ghost">Sign out</button></div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar"><div><small id="eyebrow">OVERVIEW</small><h2 id="viewTitle">Dashboard</h2></div><div class="status"><span class="dot"></span><span id="systemStatus">Connected</span></div></header>
+
+      <section id="view-dashboard" class="view active">
+        <div class="hero"><div><span class="kicker">GROUNDED AI</span><h1>Your company knowledge, answerable.</h1><p>Upload policies, manuals, contracts and reports. DocuQuery retrieves evidence before it answers.</p></div><button id="dashboardUploadBtn" class="primary">Upload document</button></div>
+        <div class="metrics"><article><small>Knowledge bases</small><strong id="metricKb">0</strong><span>Governed collections</span></article><article><small>Documents</small><strong id="metricDocs">0</strong><span>Indexed sources</span></article><article><small>Questions this month</small><strong id="metricQuestions">0</strong><span id="metricQuestionLimit">of —</span></article><article><small>Storage</small><strong id="metricStorage">0 MB</strong><span id="metricStorageLimit">of —</span></article></div>
+        <div class="panel"><div class="panel-head"><div><h3>Recent documents</h3><p>Processing state and searchable readiness.</p></div></div><div id="recentDocuments" class="table-wrap"></div></div>
+      </section>
+
+      <section id="view-knowledge" class="view">
+        <div class="section-head"><div><h2>Knowledge</h2><p>Organize source documents into governed collections.</p></div><div class="actions"><button id="newKbBtn">New knowledge base</button><button id="uploadBtn" class="primary">Upload document</button></div></div>
+        <div class="knowledge-layout"><div><h3>Knowledge bases</h3><div id="kbList" class="cards"></div></div><div><h3>Documents</h3><div id="documentsTable" class="table-wrap"></div></div></div>
+      </section>
+
+      <section id="view-chat" class="view chat-view">
+        <div class="chat-sidebar"><div class="panel-head"><h3>Chats</h3><button id="newChatBtn" class="icon-btn">＋</button></div><div id="chatSessions" class="session-list"></div></div>
+        <div class="chat-main"><div class="chat-head"><div><h3 id="chatTitle">New grounded chat</h3><p id="chatScope">Choose sources to begin.</p></div><button id="chooseSourcesBtn">Sources</button></div><div id="messages" class="messages"><div class="empty-state"><b>Ask only what your documents can prove.</b><span>Answers are generated from retrieved evidence and carry source links.</span></div></div><form id="askForm" class="composer"><textarea id="questionInput" rows="2" placeholder="Ask a question about your documents…"></textarea><button class="primary" type="submit">Ask</button></form></div>
+        <aside id="sourcePanel" class="source-panel hidden"><div class="panel-head"><h3>Source</h3><button id="closeSourceBtn" class="icon-btn">×</button></div><div id="sourceContent"></div></aside>
+      </section>
+
+      <section id="view-activity" class="view"><div class="section-head"><div><h2>Activity</h2><p>Workspace audit trail.</p></div><button id="refreshActivityBtn">Refresh</button></div><div id="activityTable" class="table-wrap"></div></section>
+
+      <section id="view-settings" class="view"><div class="section-head"><div><h2>Settings</h2><p>AI provider, usage and workspace members.</p></div></div><div class="settings-grid"><article class="panel"><h3>Gemini provider</h3><p id="geminiStatus">Loading…</p><form id="credentialForm"><label>Gemini API key<input id="geminiKey" type="password" placeholder="Paste a workspace-specific key"></label><button class="primary" type="submit">Save encrypted key</button></form></article><article class="panel"><h3>Workspace usage</h3><div id="usageSettings"></div></article><article class="panel wide"><div class="panel-head"><div><h3>Members</h3><p>Use a Supabase user UUID when adding an existing account.</p></div></div><form id="memberForm" class="inline-form"><input id="memberUserId" placeholder="User UUID" required><select id="memberRole"><option>viewer</option><option>editor</option><option>admin</option></select><button type="submit">Add / update</button></form><div id="memberTable" class="table-wrap"></div></article></div></section>
+    </main>
+  </div>
+
+  <dialog id="modal"><form method="dialog" class="modal-card"><div class="panel-head"><h3 id="modalTitle">Dialog</h3><button value="cancel" class="icon-btn">×</button></div><div id="modalBody"></div></form></dialog>
+  <script src="/app.js"></script>
+</body>
+</html>
