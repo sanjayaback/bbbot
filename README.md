@@ -1,3 +1,5 @@
+# CI: ![CI](https://github.com/sanjayaback/bbbot/actions/workflows/ci.yml/badge.svg)
+
 # DocuQuery 1.0 — End-to-End Document Intelligence
 
 DocuQuery is a multi-tenant document intelligence application: users authenticate, enter a workspace, create knowledge bases, upload PDF/DOCX/TXT files, process them asynchronously, retrieve evidence with hybrid vector + full-text search, and ask grounded questions with verifiable source citations.
