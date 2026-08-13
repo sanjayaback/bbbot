@@ -2,6 +2,13 @@ const state={config:null,session:null,authMode:'dev',workspaces:[],workspaceId:n
 const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
 function toast(message,error=false){const el=$('#toast');el.textContent=message;el.style.background=error?'#9f2d2d':'#111827';el.classList.remove('hidden');setTimeout(()=>el.classList.add('hidden'),3200)}
 function fmtBytes(n){n=Number(n||0);if(n<1024)return `${n} B`;if(n<1024**2)return `${(n/1024).toFixed(1)} KB`;if(n<1024**3)return `${(n/1024**2).toFixed(1)} MB`;return `${(n/1024**3).toFixed(2)} GB`}
+function relativeTime(iso){if(!iso)return'';const then=new Date(iso);const diff=(Date.now()-then.getTime())/1000; if(diff<60)return `${Math.floor(diff)}s`; if(diff<3600)return `${Math.floor(diff/60)}m`; if(diff<86400)return `${Math.floor(diff/3600)}h`; return `${Math.floor(diff/86400)}d`}
+// Manage KB/Upload quick menu from composer attach button
+const manageBtn = document.getElementById('manageKbBtn');
+if(manageBtn){manageBtn.addEventListener('click', e=>{e.preventDefault();openModal('Manage knowledge',`<div style="display:flex;flex-direction:column;gap:8px"><button id="modalUploadBtn" class="primary">Upload document</button><button id="modalKbBtn">Create knowledge base</button><button id="modalSettingsBtn">Workspace settings</button></div>`,()=>{document.getElementById('modalUploadBtn').onclick=()=>{$('#modal').close();showUpload()};document.getElementById('modalKbBtn').onclick=()=>{$('#modal').close();showKbCreate()};document.getElementById('modalSettingsBtn').onclick=()=>{$('#modal').close();switchView('settings')}})})}
+
+// focus composer when app ready
+function focusComposer(){const q=document.getElementById('questionInput'); if(q) q.focus()}
 function esc(v=''){return String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function authHeaders(extra={}){const h={...extra};if(state.session?.access_token)h.Authorization=`Bearer ${state.session.access_token}`;return h}
 async function refreshSession(){if(state.authMode!=='supabase'||!state.session?.refresh_token)return false;const base=state.config.supabase_url.replace(/\/$/,'');const r=await fetch(`${base}/auth/v1/token?grant_type=refresh_token`,{method:'POST',headers:{'Content-Type':'application/json','apikey':state.config.supabase_publishable_key},body:JSON.stringify({refresh_token:state.session.refresh_token})});if(!r.ok)return false;state.session=await r.json();localStorage.setItem('dq_session',JSON.stringify(state.session));return true}
