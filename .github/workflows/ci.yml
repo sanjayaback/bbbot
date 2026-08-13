@@ -21,12 +21,16 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Cache pip
+    - name: Cache Python dependencies
       uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock','**/requirements.txt','**/pyproject.toml') }}
+        path: |
+          ~/.cache/pip
+          ~/.cache/pip/wheels
+          ~/.cache/pypoetry
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock','**/requirements.txt','**/pyproject.toml') }}
         restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
           ${{ runner.os }}-pip-
 
     - name: Install dependencies
