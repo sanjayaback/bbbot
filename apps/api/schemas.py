@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class WorkspaceCreate(BaseModel):
@@ -23,6 +23,11 @@ class KnowledgeBaseUpdate(BaseModel):
 class MemberUpsert(BaseModel):
     user_id: str
     role: str = Field(pattern="^(owner|admin|editor|viewer)$")
+
+
+class MemberByEmail(BaseModel):
+    email: EmailStr
+    role: str = Field(pattern="^(admin|editor|viewer)$")
 
 
 class ChatSessionCreate(BaseModel):
