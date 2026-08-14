@@ -15,6 +15,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
@@ -23,6 +24,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 20
+
   api:
     build: .
     env_file: .env
@@ -30,11 +32,16 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/docuquery
       REDIS_URL: redis://redis:6379/0
       LOCAL_STORAGE_ROOT: /data/uploads
+      HF_HOME: /models/huggingface
+      SENTENCE_TRANSFORMERS_HOME: /models/sentence-transformers
     ports: ["8000:8000"]
-    volumes: ["uploads:/data/uploads"]
+    volumes:
+      - uploads:/data/uploads
+      - model_cache:/models
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
+
   worker:
     build: .
     command: ["rq","worker","docuquery","--url","redis://redis:6379/0"]
@@ -43,14 +50,21 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/docuquery
       REDIS_URL: redis://redis:6379/0
       LOCAL_STORAGE_ROOT: /data/uploads
-    volumes: ["uploads:/data/uploads"]
+      HF_HOME: /models/huggingface
+      SENTENCE_TRANSFORMERS_HOME: /models/sentence-transformers
+    volumes:
+      - uploads:/data/uploads
+      - model_cache:/models
     depends_on:
       db: {condition: service_healthy}
       redis: {condition: service_healthy}
+
   clamav:
     image: clamav/clamav:stable
     profiles: ["security"]
     ports: ["3310:3310"]
+
 volumes:
   pgdata:
   uploads:
+  model_cache:
