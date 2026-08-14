@@ -94,7 +94,18 @@ async def ask(session_id: str, body: AskRequest, request:Request, principal: Pri
         raise HTTPException(503, "Embedding provider returned an incompatible vector dimension")
 
     sources=(await db.execute(text("SELECT source_type,source_id FROM chat_session_sources WHERE session_id=:s"),{"s": session_id})).mappings().all()
-    chunks = await hybrid_retrieve(db,workspace_id,query_embedding,body.question,list(sources),limit=8)
+    embed_provider = getattr(embedder, "provider", settings.embedding_provider.lower())
+    embed_model = getattr(embedder, "model", None)
+    chunks = await hybrid_retrieve(
+        db,
+        workspace_id,
+        query_embedding,
+        body.question,
+        list(sources),
+        limit=8,
+        embedding_provider=embed_provider,
+        embedding_model=embed_model,
+    )
     context, citations = build_context(chunks)
 
     user_message_id=str(uuid.uuid4())
@@ -107,7 +118,7 @@ async def ask(session_id: str, body: AskRequest, request:Request, principal: Pri
     model = getattr(llm, "model", "unknown")
     usage_id=str(uuid.uuid4())
     await db.execute(text("INSERT INTO usage_events(id,workspace_id,user_id,operation,provider,model,input_tokens) VALUES(:id,:w,:u,'chat_question',:p,:m,:t)"),{"id":usage_id,"w":workspace_id,"u":principal.user_id,"p":provider,"m":model,"t":max(1,(len(body.question)+len(context))//4)})
-    await write_audit(db,workspace_id=workspace_id,actor_user_id=principal.user_id,action="chat.question",resource_type="chat_session",resource_id=session_id,request_id=request.state.request_id,ip=request.client.host if request.client else None,metadata={"embedding_provider":settings.embedding_provider,"chat_provider":settings.chat_provider})
+    await write_audit(db,workspace_id=workspace_id,actor_user_id=principal.user_id,action="chat.question",resource_type="chat_session",resource_id=session_id,request_id=request.state.request_id,ip=request.client.host if request.client else None,metadata={"embedding_provider":embed_provider,"embedding_model":embed_model,"chat_provider":settings.chat_provider})
     await db.commit()
 
     async def stream():
