@@ -21,9 +21,28 @@ class Settings(BaseSettings):
     storage_bucket: str = "documents"
     local_storage_root: str = "uploads"
 
-    ai_mode: str = "gemini"  # gemini | mock (mock is development/test only)
+    # Application AI modes. search_only is the safest/default non-generative path.
+    app_mode: str = "search_only"  # search_only | local_llm | cloud_llm
+    ai_mode: str = "gemini"  # backwards compatibility: gemini | mock
+    embedding_provider: str = "local"  # local | gemini | mock
+    chat_provider: str = "disabled"  # disabled | local | gemini | mock
+
+    # Local multilingual embeddings. multilingual-e5-base outputs 768 dimensions,
+    # matching the existing pgvector schema without a destructive migration.
+    local_embed_model: str = "intfloat/multilingual-e5-base"
+    local_embed_device: str = "cpu"
+    local_embed_query_prefix: str = "query: "
+    local_embed_passage_prefix: str = "passage: "
+
+    # Optional local/OpenAI-compatible LLM endpoint (Ollama, llama.cpp, vLLM, etc.).
+    local_llm_base_url: str = "http://host.docker.internal:11434/v1"
+    local_llm_api_key: str = "ollama"
+    local_llm_model: str = "qwen2.5:7b"
+    local_llm_timeout_seconds: float = 120.0
+
+    # Optional Gemini cloud providers.
     gemini_api_key: str = ""
-    gemini_chat_model: str = "gemini-3-flash-preview"
+    gemini_chat_model: str = "gemini-2.5-flash"
     gemini_embed_model: str = "gemini-embedding-001"
     embedding_dimension: int = 768
     credential_encryption_key: str = ""
