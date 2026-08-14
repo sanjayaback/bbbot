@@ -24,8 +24,8 @@ class Settings(BaseSettings):
 
     ai_mode: str = "gemini"  # gemini | mock (mock is development/test only)
     gemini_api_key: str = ""
-    gemini_chat_model: str = "gemini-3-flash-preview"
-    gemini_embed_model: str = "gemini-embedding-001"
+    gemini_chat_model: str = "gemini-3.6-flash"
+    gemini_embed_model: str = "gemini-embedding-2"
     embedding_dimension: int = 768
     credential_encryption_key: str = ""
 
