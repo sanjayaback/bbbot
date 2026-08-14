@@ -22,7 +22,7 @@ class KnowledgeBaseUpdate(BaseModel):
 
 class MemberUpsert(BaseModel):
     user_id: str
-    role: str = Field(pattern="^(owner|admin|editor|viewer)$")
+    role: str = Field(pattern="^(admin|editor|viewer)$")
 
 
 class MemberByEmail(BaseModel):
