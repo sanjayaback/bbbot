@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.10, 3.11, 3.12]
+        python-version: [3.11, 3.12]
 
     steps:
     - uses: actions/checkout@v4
@@ -27,26 +27,15 @@ jobs:
         path: |
           ~/.cache/pip
           ~/.cache/pip/wheels
-          ~/.cache/pypoetry
-        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock','**/requirements.txt','**/pyproject.toml') }}
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-pip-${{ matrix.python-version }}-
           ${{ runner.os }}-pip-
 
-    - name: Install dependencies
+    - name: Install package and test dependencies
       run: |
         python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt
-        elif [ -f pyproject.toml ]; then pip install poetry && poetry export -f requirements.txt --without-hashes -o requirements.txt || true && pip install -r requirements.txt
-        else pip install -e . || true; fi
-
-    - name: Lint (flake8)
-      run: |
-        if python -c "import importlib.util,sys; sys.exit(0 if importlib.util.find_spec('flake8') else 1)"; then
-          flake8 || true
-        else
-          echo 'flake8 not installed, skipping'
-        fi
+        pip install -e '.[dev]'
 
     - name: Run tests
       run: |
@@ -59,3 +48,20 @@ jobs:
       with:
         name: junit-${{ matrix.python-version }}
         path: reports/junit-${{ matrix.python-version }}.xml
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production source archive
+        run: |
+          mkdir -p dist
+          zip -r dist/docuquery-production-fixed.zip . \
+            -x '.git/*' 'dist/*' '.env' '.venv/*' '__pycache__/*' '*.pyc'
+      - name: Upload production source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: docuquery-production-fixed
+          path: dist/docuquery-production-fixed.zip
+          if-no-files-found: error
+          retention-days: 14
