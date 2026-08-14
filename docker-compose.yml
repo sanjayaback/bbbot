@@ -29,7 +29,7 @@ services:
     build: .
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/docuquery
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/docuquery}
       REDIS_URL: redis://redis:6379/0
       LOCAL_STORAGE_ROOT: /data/uploads
       HF_HOME: /models/huggingface
@@ -47,7 +47,7 @@ services:
     command: ["rq","worker","docuquery","--url","redis://redis:6379/0"]
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/docuquery
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@db:5432/docuquery}
       REDIS_URL: redis://redis:6379/0
       LOCAL_STORAGE_ROOT: /data/uploads
       HF_HOME: /models/huggingface
