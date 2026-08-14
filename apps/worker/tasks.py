@@ -37,6 +37,7 @@ async def _run(job_id:str):
                 raise ValueError("No readable text was extracted from the document")
 
             await status('chunking',35)
+            # Idempotent reprocessing: remove previous derived page/chunk data for this version.
             await db.execute(text("DELETE FROM document_pages WHERE document_version_id=:v"),{"v":row['document_version_id']})
             await db.commit()
             chunks=[]
@@ -53,10 +54,18 @@ async def _run(job_id:str):
                 raise ValueError("Document produced no searchable chunks")
 
             await status('embedding',50)
-            api_key=None if settings.ai_mode == 'mock' else await resolve_gemini_key(db,str(row['workspace_id']))
+            api_key = None
+            if settings.embedding_provider.lower() == 'gemini':
+                api_key = await resolve_gemini_key(db,str(row['workspace_id']))
             embedder=create_embedder(api_key)
+            embed_document = getattr(embedder, 'embed_document', embedder.embed)
+            provider = getattr(embedder, 'provider', settings.embedding_provider.lower())
             for n,(pid,page,idx,chunk) in enumerate(chunks):
-                vec=await embedder.embed(chunk)
+                vec=await embed_document(chunk)
+                if len(vec) != settings.embedding_dimension:
+                    raise RuntimeError(
+                        f"Embedding dimension {len(vec)} does not match configured vector dimension {settings.embedding_dimension}"
+                    )
                 cid=str(uuid.uuid4())
                 vector='['+','.join(f'{x:.8f}' for x in vec)+']'
                 await db.execute(text("""
@@ -65,13 +74,14 @@ async def _run(job_id:str):
                 """),{"id":cid,"w":row['workspace_id'],"v":row['document_version_id'],"p":pid,"i":idx,"c":chunk,"t":max(1,len(chunk)//4),"m":json.dumps({"section":page.section})})
                 await db.execute(text("""
                   INSERT INTO chunk_embeddings(id,chunk_id,provider,model,dimension,embedding_version,embedding)
-                  VALUES(:id,:c,'gemini',:m,:d,1,CAST(:e AS vector))
-                """),{"id":str(uuid.uuid4()),"c":cid,"m":embedder.model,"d":len(vec),"e":vector})
+                  VALUES(:id,:c,:provider,:m,:d,1,CAST(:e AS vector))
+                """),{"id":str(uuid.uuid4()),"c":cid,"provider":provider,"m":embedder.model,"d":len(vec),"e":vector})
                 if n % 10 == 0 or n == len(chunks)-1:
                     await db.commit()
                     await status('embedding',50+int(45*(n+1)/len(chunks)))
             await status('ready',100,finished=True)
         except Exception as exc:
+            await db.rollback()
             await status('failed',0,str(exc)[:2000],finished=True)
             raise
 
