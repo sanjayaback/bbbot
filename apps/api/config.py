@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_secret: str = "change-me"
     app_base_url: str = "http://localhost:8000"
+    cors_origins: str = "http://localhost:8000,http://localhost:8080,http://localhost:3000"
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/docuquery"
     redis_url: str = "redis://localhost:6379/0"
 
@@ -23,9 +24,10 @@ class Settings(BaseSettings):
 
     ai_mode: str = "gemini"  # gemini | mock (mock is development/test only)
     gemini_api_key: str = ""
-    gemini_chat_model: str = "gemini-3-flash-preview"
-    gemini_embed_model: str = "gemini-embedding-001"
+    gemini_chat_model: str = "gemini-3.6-flash"
+    gemini_embed_model: str = "gemini-embedding-2"
     embedding_dimension: int = 768
+    retrieval_min_score: float = 0.35
     credential_encryption_key: str = ""
 
     max_upload_mb: int = 20
@@ -48,6 +50,10 @@ class Settings(BaseSettings):
         if self.supabase_url:
             return f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
         return ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 settings = Settings()
