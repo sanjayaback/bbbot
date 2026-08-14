@@ -42,13 +42,36 @@ async def upload_document(request: Request, workspace_id:str=Form(...), knowledg
     except Exception as exc:
         raise HTTPException(502,"Could not store uploaded document") from exc
 
-    await db.execute(text("INSERT INTO documents(id,workspace_id,knowledge_base_id,name,created_by) VALUES(:id,:w,:k,:n,:u)"),{"id":doc_id,"w":workspace_id,"k":knowledge_base_id,"n":safe_name,"u":p.user_id})
-    await db.execute(text("INSERT INTO document_versions(id,document_id,version_no,storage_path,sha256,mime_type,file_size,status) VALUES(:id,:d,1,:s,:h,:m,:z,'queued')"),{"id":ver_id,"d":doc_id,"s":storage_path,"h":sha,"m":file.content_type,"z":len(raw)})
-    await db.execute(text("INSERT INTO document_jobs(id,workspace_id,document_version_id,job_type,status,progress) VALUES(:id,:w,:v,'ingest','queued',0)"),{"id":job_id,"w":workspace_id,"v":ver_id})
-    await db.execute(text("INSERT INTO usage_events(workspace_id,user_id,operation,storage_bytes) VALUES(:w,:u,'document_upload',:z)"),{"w":workspace_id,"u":p.user_id,"z":len(raw)})
-    await write_audit(db,workspace_id=workspace_id,actor_user_id=p.user_id,action="document.uploaded",resource_type="document",resource_id=doc_id,request_id=request.state.request_id,ip=request.client.host if request.client else None,metadata={"filename":safe_name,"size":len(raw)})
-    await db.commit()
-    Queue("docuquery", connection=Redis.from_url(settings.redis_url)).enqueue("apps.worker.tasks.ingest_document", job_id, retry=Retry(max=3), job_timeout=1800)
+    try:
+        await db.execute(text("INSERT INTO documents(id,workspace_id,knowledge_base_id,name,created_by) VALUES(:id,:w,:k,:n,:u)"),{"id":doc_id,"w":workspace_id,"k":knowledge_base_id,"n":safe_name,"u":p.user_id})
+        await db.execute(text("INSERT INTO document_versions(id,document_id,version_no,storage_path,sha256,mime_type,file_size,status) VALUES(:id,:d,1,:s,:h,:m,:z,'queued')"),{"id":ver_id,"d":doc_id,"s":storage_path,"h":sha,"m":file.content_type,"z":len(raw)})
+        await db.execute(text("INSERT INTO document_jobs(id,workspace_id,document_version_id,job_type,status,progress) VALUES(:id,:w,:v,'ingest','queued',0)"),{"id":job_id,"w":workspace_id,"v":ver_id})
+        await db.execute(text("INSERT INTO usage_events(workspace_id,user_id,operation,storage_bytes) VALUES(:w,:u,'document_upload',:z)"),{"w":workspace_id,"u":p.user_id,"z":len(raw)})
+        await write_audit(db,workspace_id=workspace_id,actor_user_id=p.user_id,action="document.uploaded",resource_type="document",resource_id=doc_id,request_id=request.state.request_id,ip=request.client.host if request.client else None,metadata={"filename":safe_name,"size":len(raw)})
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        try:
+            storage_backend().delete(storage_path)
+        except Exception:
+            pass
+        raise
+
+    try:
+        redis = Redis.from_url(settings.redis_url, socket_connect_timeout=5, socket_timeout=5)
+        redis.ping()
+        Queue("docuquery", connection=redis).enqueue(
+            "apps.worker.tasks.ingest_document",
+            job_id,
+            retry=Retry(max=3),
+            job_timeout=1800,
+        )
+    except Exception as exc:
+        await db.execute(text("UPDATE document_jobs SET status='failed',error_message=:e,updated_at=now(),finished_at=now() WHERE id=:j"),{"e":f"Queue unavailable: {type(exc).__name__}"[:2000],"j":job_id})
+        await db.execute(text("UPDATE document_versions SET status='failed' WHERE id=:v"),{"v":ver_id})
+        await db.commit()
+        raise HTTPException(503,"Document was stored but background processing queue is unavailable. Retry after Redis/worker is healthy.") from exc
+
     return {"document_id":doc_id,"version_id":ver_id,"job_id":job_id,"status":"queued"}
 
 
@@ -99,6 +122,7 @@ async def delete_document(document_id:str,request:Request,p:Principal=Depends(cu
     await db.execute(text("UPDATE documents SET archived_at=now() WHERE id=:d"),{"d":document_id})
     await write_audit(db,workspace_id=workspace_id,actor_user_id=p.user_id,action="document.archived",resource_type="document",resource_id=document_id,request_id=request.state.request_id,ip=request.client.host if request.client else None)
     await db.commit()
+
 
 @router.get("/{document_id}/chunks/{chunk_id}")
 async def source_chunk(document_id:str,chunk_id:str,p:Principal=Depends(current_principal),db:AsyncSession=Depends(get_db)):
