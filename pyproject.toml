@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "docuquery"
-version = "1.0.0"
-description = "Multi-tenant document intelligence platform with grounded RAG and verifiable citations"
+version = "1.1.0"
+description = "Multi-tenant document intelligence platform with grounded retrieval, local/cloud AI providers and verifiable citations"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.116",
@@ -23,6 +23,7 @@ dependencies = [
   "python-docx>=1.2",
   "cryptography>=45",
   "google-genai>=1.31",
+  "sentence-transformers>=5.0",
   "pgvector>=0.4",
   "python-magic>=0.4.27; platform_system != 'Windows'",
   "structlog>=25.4",
