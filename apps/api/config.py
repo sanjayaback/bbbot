@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_secret: str = "change-me"
     app_base_url: str = "http://localhost:8000"
+    cors_origins: str = "http://localhost:8000,http://localhost:8080,http://localhost:3000"
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/docuquery"
     redis_url: str = "redis://localhost:6379/0"
 
@@ -48,6 +49,10 @@ class Settings(BaseSettings):
         if self.supabase_url:
             return f"{self.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
         return ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 settings = Settings()
