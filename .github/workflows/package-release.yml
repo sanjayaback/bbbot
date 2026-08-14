@@ -1,0 +1,30 @@
+name: Package DocuQuery Source
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build source archive
+        run: |
+          mkdir -p dist
+          zip -r dist/docuquery-production-fixed.zip . \
+            -x '.git/*' 'dist/*' '.env' '.venv/*' '__pycache__/*' '*.pyc'
+
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: docuquery-production-fixed
+          path: dist/docuquery-production-fixed.zip
+          if-no-files-found: error
+          retention-days: 14
