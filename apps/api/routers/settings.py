@@ -22,7 +22,23 @@ async def get_settings(workspace_id:str,p:Principal=Depends(current_principal),d
        COALESCE((SELECT sum(v.file_size) FROM document_versions v JOIN documents d ON d.id=v.document_id WHERE d.workspace_id=w.id),0) AS storage_used
       FROM workspaces w WHERE w.id=:w
     """),{"w":workspace_id})).mappings().one()
-    return {"role":role,"provider_credential":dict(key) if key else None,"usage":dict(ws),"managed_gemini_configured":bool(settings.gemini_api_key),"ai_mode":settings.ai_mode}
+    return {
+        "role":role,
+        "provider_credential":dict(key) if key else None,
+        "usage":dict(ws),
+        "managed_gemini_configured":bool(settings.gemini_api_key),
+        "ai_mode":settings.ai_mode,
+        "app_mode":settings.app_mode,
+        "embedding_provider":settings.embedding_provider,
+        "embedding_model":settings.local_embed_model if settings.embedding_provider == 'local' else settings.gemini_embed_model,
+        "chat_provider":settings.chat_provider,
+        "chat_model":(
+            'evidence-only' if settings.chat_provider == 'disabled'
+            else settings.local_llm_model if settings.chat_provider == 'local'
+            else settings.gemini_chat_model if settings.chat_provider == 'gemini'
+            else 'mock-grounded-v1'
+        ),
+    }
 
 
 @router.post("/credentials")
