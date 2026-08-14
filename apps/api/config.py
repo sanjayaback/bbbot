@@ -1,3 +1,4 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -59,6 +60,28 @@ class Settings(BaseSettings):
     clamav_port: int = 3310
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    @model_validator(mode="after")
+    def validate_provider_modes(self):
+        app_mode = self.app_mode.lower()
+        embedding_provider = self.embedding_provider.lower()
+        chat_provider = self.chat_provider.lower()
+
+        if app_mode not in {"search_only", "local_llm", "cloud_llm"}:
+            raise ValueError("APP_MODE must be search_only, local_llm, or cloud_llm")
+        if embedding_provider not in {"local", "gemini", "mock"}:
+            raise ValueError("EMBEDDING_PROVIDER must be local, gemini, or mock")
+        if chat_provider not in {"disabled", "local", "gemini", "mock"}:
+            raise ValueError("CHAT_PROVIDER must be disabled, local, gemini, or mock")
+        if app_mode == "search_only" and chat_provider not in {"disabled", "mock"}:
+            raise ValueError("APP_MODE=search_only requires CHAT_PROVIDER=disabled")
+        if app_mode == "local_llm" and chat_provider != "local":
+            raise ValueError("APP_MODE=local_llm requires CHAT_PROVIDER=local")
+        if app_mode == "cloud_llm" and chat_provider != "gemini":
+            raise ValueError("APP_MODE=cloud_llm requires CHAT_PROVIDER=gemini")
+        if self.embedding_dimension <= 0:
+            raise ValueError("EMBEDDING_DIMENSION must be positive")
+        return self
 
     @property
     def effective_jwks_url(self) -> str:
