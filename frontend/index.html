@@ -6,9 +6,49 @@
   <meta name="color-scheme" content="light">
   <title>DocuQuery — Document Intelligence</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/chat.css">
 </head>
 <body>
   <div id="toast" class="toast hidden"></div>
+
+  <!-- Public landing page for logged-out visitors -->
+  <section id="view-landing" class="view landing-view">
+    <div class="hero">
+      <div>
+        <span class="kicker">DocuQuery</span>
+        <h1>Ask your documents with evidence.</h1>
+        <p class="muted">Get precise answers grounded in your PDFs, DOCX and text files — with clickable citations back to the source.</p>
+        <p style="margin-top:16px;display:flex;gap:8px">
+          <button id="landingGetStartedBtn" class="primary">Get started</button>
+          <button id="landingLearnMoreBtn" class="ghost">Learn more</button>
+        </p>
+      </div>
+      <div>
+        <div class="card" style="max-width:520px;padding:16px">
+          <h3>Try DocuQuery</h3>
+          <p class="muted">Sign in to create a workspace, upload documents and start asking grounded questions.</p>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:28px">
+      <div class="panel-head"><div><h3>How it works</h3><p class="muted">From document to answer in four simple steps.</p></div></div>
+      <div class="cards" style="display:flex;gap:12px;margin-top:12px">
+        <article class="card"><h4>1. Upload</h4><p class="muted">Add PDFs, DOCX or TXT files. Optionally OCR scanned docs.</p></article>
+        <article class="card"><h4>2. Index</h4><p class="muted">Documents are chunked, indexed with vector + text retrieval and reranked.</p></article>
+        <article class="card"><h4>3. Ask</h4><p class="muted">Pose questions to your workspace — queries search governed knowledge bases.</p></article>
+        <article class="card"><h4>4. Verify</h4><p class="muted">Answers include clickable citations you can open and inspect.</p></article>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <div class="panel-head"><div><h3>Key features</h3><p class="muted">Built from the codebase — no marketing fiction.</p></div></div>
+      <div class="cards" style="display:flex;gap:12px;margin-top:12px">
+        <article class="card"><h4>Grounded answers</h4><p class="muted">Answers cite source chunks and let you inspect the original text.</p></article>
+        <article class="card"><h4>Workspaces & governance</h4><p class="muted">Organize knowledge bases with role-based access and audit trails.</p></article>
+        <article class="card"><h4>Hybrid retrieval</h4><p class="muted">Vector + full-text retrieval with reranking for precise evidence.</p></article>
+        <article class="card"><h4>Bring-your-own key</h4><p class="muted">Encrypt and store provider keys per workspace, or use a managed key.</p></article>
+      </div>
+    </div>
+  </section>
 
   <section id="authScreen" class="auth-screen hidden">
     <div class="auth-card">
@@ -30,11 +70,11 @@
       <div class="brand"><span>DQ</span><div><b>DocuQuery</b><small>Intelligence</small></div></div>
       <div class="workspace-picker"><small>WORKSPACE</small><select id="workspaceSelect"></select><button id="newWorkspaceBtn" class="icon-btn" title="New workspace">＋</button></div>
       <nav id="nav">
-        <button data-view="dashboard" class="active">Dashboard</button>
-        <button data-view="knowledge">Knowledge</button>
-        <button data-view="chat">Chat</button>
-        <button data-view="activity">Activity</button>
-        <button data-view="settings">Settings</button>
+        <button data-view="dashboard" class="active" aria-label="Dashboard">Dashboard</button>
+        <button data-view="knowledge" aria-label="Knowledge">Knowledge</button>
+        <button data-view="chat" aria-label="Chat">Chat</button>
+        <button data-view="activity" aria-label="Activity">Activity</button>
+        <button data-view="settings" aria-label="Settings">Settings</button>
       </nav>
       <div class="sidebar-bottom"><div id="userEmail" class="user-email"></div><button id="signOutBtn" class="ghost">Sign out</button></div>
     </aside>
@@ -42,21 +82,72 @@
     <main class="main">
       <header class="topbar"><div><small id="eyebrow">OVERVIEW</small><h2 id="viewTitle">Dashboard</h2></div><div class="status"><span class="dot"></span><span id="systemStatus">Connected</span></div></header>
 
-      <section id="view-dashboard" class="view active">
+      <section id="view-dashboard" class="view">
         <div class="hero"><div><span class="kicker">GROUNDED AI</span><h1>Your company knowledge, answerable.</h1><p>Upload policies, manuals, contracts and reports. DocuQuery retrieves evidence before it answers.</p></div><button id="dashboardUploadBtn" class="primary">Upload document</button></div>
-        <div class="metrics"><article><small>Knowledge bases</small><strong id="metricKb">0</strong><span>Governed collections</span></article><article><small>Documents</small><strong id="metricDocs">0</strong><span>Indexed sources</span></article><article><small>Questions this month</small><strong id="metricQuestions">0</strong><span id="metricQuestionLimit">of —</span></article><article><small>Storage</small><strong id="metricStorage">0 MB</strong><span id="metricStorageLimit">of —</span></article></div>
         <div class="panel"><div class="panel-head"><div><h3>Recent documents</h3><p>Processing state and searchable readiness.</p></div></div><div id="recentDocuments" class="table-wrap"></div></div>
       </section>
 
       <section id="view-knowledge" class="view">
         <div class="section-head"><div><h2>Knowledge</h2><p>Organize source documents into governed collections.</p></div><div class="actions"><button id="newKbBtn">New knowledge base</button><button id="uploadBtn" class="primary">Upload document</button></div></div>
+        <div class="panel"><div class="panel-head"><div><h3>Workspace metrics</h3><p>Storage, usage and question counts for this workspace.</p></div></div>
+          <div class="metrics"><article><small>Knowledge bases</small><strong id="metricKb">0</strong><span>Governed collections</span></article><article><small>Documents</small><strong id="metricDocs">0</strong><span>Indexed sources</span></article><article><small>Questions this month</small><strong id="metricQuestions">0</strong><span id="metricQuestionLimit">of —</span></article><article><small>Storage</small><strong id="metricStorage">0 MB</strong><span id="metricStorageLimit">of —</span></article></div>
+        </div>
         <div class="knowledge-layout"><div><h3>Knowledge bases</h3><div id="kbList" class="cards"></div></div><div><h3>Documents</h3><div id="documentsTable" class="table-wrap"></div></div></div>
       </section>
 
-      <section id="view-chat" class="view chat-view">
-        <div class="chat-sidebar"><div class="panel-head"><h3>Chats</h3><button id="newChatBtn" class="icon-btn">＋</button></div><div id="chatSessions" class="session-list"></div></div>
-        <div class="chat-main"><div class="chat-head"><div><h3 id="chatTitle">New grounded chat</h3><p id="chatScope">Choose sources to begin.</p></div><button id="chooseSourcesBtn">Sources</button></div><div id="messages" class="messages"><div class="empty-state"><b>Ask only what your documents can prove.</b><span>Answers are generated from retrieved evidence and carry source links.</span></div></div><form id="askForm" class="composer"><textarea id="questionInput" rows="2" placeholder="Ask a question about your documents…"></textarea><button class="primary" type="submit">Ask</button></form></div>
-        <aside id="sourcePanel" class="source-panel hidden"><div class="panel-head"><h3>Source</h3><button id="closeSourceBtn" class="icon-btn">×</button></div><div id="sourceContent"></div></aside>
+      <section id="view-chat" class="view chat-view active">
+        <!-- Left: chat sidebar (already exists) -->
+        <div class="chat-sidebar">
+          <div class="panel-head">
+            <div style="display:flex;gap:8px;align-items:center">
+              <button id="newChatBtn" class="primary">＋ New chat</button>
+              <div class="workspace-mini"><select id="workspaceSelectMini"></select></div>
+            </div>
+          </div>
+          <div id="chatSessions" class="session-list"></div>
+          <div class="sidebar-bottom-links" style="padding:12px">
+            <button id="linkKnowledge" class="ghost">Knowledge</button>
+            <button id="linkUsage" class="ghost">Usage</button>
+            <button id="linkSettings" class="ghost">Settings</button>
+          </div>
+        </div>
+
+        <!-- Center canvas -->
+        <div class="chat-canvas">
+          <div class="chat-head">
+            <div>
+              <h3 id="chatTitle">New grounded chat</h3>
+              <p id="chatScope">Choose sources to begin.</p>
+            </div>
+            <button id="chooseSourcesBtn" class="ghost">Sources</button>
+          </div>
+
+          <div id="chatCanvasInner" class="chat-canvas-inner">
+            <!-- Empty / new chat landing state -->
+            <div id="chatLanding" class="chat-landing">
+              <h2>DocuQuery Intelligence</h2>
+              <p class="muted">What would you like to verify?</p>
+              <div class="starter-chips" style="margin:12px 0;display:flex;gap:8px;flex-wrap:wrap">
+                <button class="chip">📄 Summarize Security Policy</button>
+                <button class="chip">📊 Compare Q3 Contracts</button>
+                <button class="chip">📁 Select Sources</button>
+              </div>
+            </div>
+
+            <!-- Messages area (visible when chat active) -->
+            <div id="messages" class="messages"><div class="empty-state"><b>Ask only what your documents can prove.</b><span>Answers are generated from retrieved evidence and carry source links.</span></div></div>
+          </div>
+
+          <!-- Floating input omnibar -->
+          <div id="omnibar" class="omnibar">
+            <div class="omnibar-left"><button id="omnibarAttach" class="icon-btn">📎</button><button id="omnibarScope" class="ghost">Scope ▾</button></div>
+            <input id="omnibarInput" placeholder="Ask a question about your documents...">
+            <div class="omnibar-right"><button id="omnibarSend" class="primary">Send</button></div>
+          </div>
+        </div>
+
+        <!-- Right: source / citation drawer -->
+        <aside id="sourcePanel" class="source-panel"><div class="panel-head"><h3>Source</h3><button id="closeSourceBtn" class="icon-btn">×</button></div><div id="sourceContent"></div></aside>
       </section>
 
       <section id="view-activity" class="view"><div class="section-head"><div><h2>Activity</h2><p>Workspace audit trail.</p></div><button id="refreshActivityBtn">Refresh</button></div><div id="activityTable" class="table-wrap"></div></section>
@@ -65,7 +156,8 @@
     </main>
   </div>
 
-  <dialog id="modal"><form method="dialog" class="modal-card"><div class="panel-head"><h3 id="modalTitle">Dialog</h3><button value="cancel" class="icon-btn">×</button></div><div id="modalBody"></div></form></dialog>
+  <dialog id="modal"><form method="dialog" class="modal-card"><div class="panel-head"><h3 id="modalTitle">Dialog</h3><button value="cancel" class="icon-btn" formnovalidate>×</button></div><div id="modalBody"></div></form></dialog>
   <script src="/app.js"></script>
+  <script src="/chat-ux.js"></script>
 </body>
 </html>
