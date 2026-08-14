@@ -1,167 +1,243 @@
-# CI: ![CI](https://github.com/sanjayaback/bbbot/actions/workflows/ci.yml/badge.svg)
+# DocuQuery 1.1 — Secure Document Intelligence
 
-# DocuQuery 1.0 — End-to-End Document Intelligence
+DocuQuery is a multi-tenant document intelligence platform. Users authenticate with Supabase, work inside RBAC-protected workspaces, create knowledge bases, upload PDF/DOCX/TXT documents, process them asynchronously through Redis/RQ, index them in PostgreSQL/pgvector, retrieve evidence with hybrid search, and open verifiable citations.
 
-DocuQuery is a multi-tenant document intelligence application: users authenticate, enter a workspace, create knowledge bases, upload PDF/DOCX/TXT files, process them asynchronously, retrieve evidence with hybrid vector + full-text search, and ask grounded questions with verifiable source citations.
+The core retrieval system no longer needs a generative LLM. Local multilingual embeddings are the recommended default. Gemini and local LLMs are optional answer-generation providers.
 
-## What is included
+## Verified core architecture
 
-- FastAPI API and static SPA frontend
-- Supabase Auth production mode plus a local development auth mode
-- Workspace tenancy and Owner/Admin/Editor/Viewer roles
-- Knowledge-base CRUD and workspace member management
-- Version-aware document model and secure upload validation
-- Local storage and Supabase Storage backends
-- Redis + RQ durable ingestion worker with progress and retry state
-- PDF/DOCX/TXT extraction and optional OCR fallback for scanned PDFs
-- Optional ClamAV upload scanning hook
-- Smart chunking, Gemini embeddings, pgvector HNSW and PostgreSQL FTS
-- Hybrid retrieval plus a replaceable reranking stage
-- Gemini managed-key or encrypted workspace BYOK credentials
-- Grounded generation with document prompt-injection defenses
-- SSE streaming answers, persisted messages and server-owned citations
-- Clickable citation source viewer
-- Monthly question quota, storage quota and per-user request rate limiting
-- Usage events and workspace audit log
-- Dashboard, Knowledge, Chat, Activity and Settings interfaces
-- Docker Compose for PostgreSQL/pgvector, Redis, API and worker
+- FastAPI API + static vanilla HTML/CSS/JS frontend
+- Supabase Auth with JWT verification
+- Owner/Admin/Editor/Viewer workspace RBAC
+- Supabase PostgreSQL + pgvector
+- Supabase Storage or local storage backend
+- Redis + RQ background document ingestion
+- Page-aware PDF/DOCX/TXT parsing
+- Smart paragraph/sentence-aware chunking
+- Local multilingual embeddings or optional Gemini embeddings
+- PostgreSQL FTS + pgvector hybrid retrieval
+- Non-generative evidence-search mode
+- Optional local OpenAI-compatible LLM
+- Optional Gemini cloud LLM
+- Server-owned real citations
+- Persistent chat sessions/messages
+- Usage quotas, rate limiting and audit logs
+- Optional OCR and ClamAV scanning
 
-## Fastest local end-to-end run
+## AI provider modes
 
-1. Copy the environment file:
+### 1. Search-only — recommended default
+
+No generative LLM is called.
+
+```env
+APP_MODE=search_only
+EMBEDDING_PROVIDER=local
+CHAT_PROVIDER=disabled
+LOCAL_EMBED_MODEL=intfloat/multilingual-e5-base
+EMBEDDING_DIMENSION=768
+```
+
+Flow:
+
+```text
+Document -> local embedding -> pgvector
+Question -> local embedding -> hybrid search -> evidence + citations
+```
+
+Use the dedicated endpoint:
+
+```text
+GET /api/search?workspace_id=<uuid>&q=<question>
+```
+
+It returns structured evidence and citations without an LLM call.
+
+### 2. Local LLM
+
+```env
+APP_MODE=local_llm
+EMBEDDING_PROVIDER=local
+CHAT_PROVIDER=local
+LOCAL_LLM_BASE_URL=http://host.docker.internal:11434/v1
+LOCAL_LLM_MODEL=qwen2.5:7b
+```
+
+The local chat adapter works with OpenAI-compatible Ollama, llama.cpp and vLLM endpoints.
+
+### 3. Gemini cloud LLM
+
+```env
+APP_MODE=cloud_llm
+EMBEDDING_PROVIDER=local
+CHAT_PROVIDER=gemini
+```
+
+A workspace BYOK Gemini key or managed server key can be used for answer generation while document/query embeddings remain local.
+
+Gemini embeddings remain supported if explicitly selected:
+
+```env
+EMBEDDING_PROVIDER=gemini
+```
+
+## Important: embedding migrations
+
+Never compare vectors from different embedding models as though they share the same semantic space.
+
+The existing schema is `vector(768)`, so the default local model is `intfloat/multilingual-e5-base`, which keeps the existing dimension.
+
+After changing `EMBEDDING_PROVIDER` or `LOCAL_EMBED_MODEL`, reindex existing documents:
+
+```text
+POST /api/maintenance/documents/{document_id}/reindex
+```
+
+The worker deletes derived pages/chunks for that document version and rebuilds them with the selected embedding provider/model. Retrieval filters vectors by provider/model so stale Gemini vectors are not mixed with local vectors.
+
+## Docker Desktop
+
+Copy the environment file:
 
 ```bash
 cp .env.example .env
 ```
 
-The example deliberately uses:
-
-```text
-AUTH_MODE=dev
-AI_MODE=mock
-STORAGE_BACKEND=local
-```
-
-This lets the complete upload → worker → indexing → chat → citation flow run without Supabase or Gemini credentials. `AI_MODE=mock` is development/test-only and must not be used as a production AI provider.
-
-2. Start the stack:
+Then start:
 
 ```bash
 docker compose up --build
 ```
 
-3. Open:
+Open:
 
 ```text
 http://localhost:8000
 ```
 
-4. Create a workspace → create a knowledge base → upload a PDF/DOCX/TXT → wait for `ready` → start a chat → ask a question → open a citation.
+The API and worker share a persistent Hugging Face/Sentence Transformers model cache volume so the local embedding model is not downloaded on every container restart.
 
-## Production Supabase setup
+`docker-compose.yml` respects `DATABASE_URL` from `.env`. This means the same Docker stack can use either the local PostgreSQL fallback or the configured real Supabase PostgreSQL connection.
 
-Create a Supabase project, then run `db/schema.sql` in the SQL editor. Do **not** run `db/local_bootstrap.sql` against Supabase; it only emulates the auth schema for local Docker.
+## Real Supabase configuration
 
-Create a private Storage bucket named `documents` (or change `STORAGE_BUCKET`). Configure the production environment:
-
-```text
+```env
 APP_ENV=production
 AUTH_MODE=supabase
 STORAGE_BACKEND=supabase
-SUPABASE_URL=...
+DATABASE_URL=postgresql+asyncpg://...
+SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 SUPABASE_PUBLISHABLE_KEY=...
 SUPABASE_SECRET_KEY=...
-SUPABASE_JWKS_URL=.../auth/v1/.well-known/jwks.json
-AI_MODE=gemini
-GEMINI_API_KEY=...
+SUPABASE_JWKS_URL=https://YOUR_PROJECT.supabase.co/auth/v1/.well-known/jwks.json
+STORAGE_BUCKET=documents
+REDIS_URL=redis://redis:6379/0
 CREDENTIAL_ENCRYPTION_KEY=...
 ```
 
-The Supabase secret/service credential is backend-only. Never expose it in frontend JavaScript.
+Never expose `DATABASE_URL`, `SUPABASE_SECRET_KEY`, `CREDENTIAL_ENCRYPTION_KEY`, Redis credentials, or customer AI keys to browser JavaScript.
 
-### Database connection
+## Document ingestion
 
-The API/worker need a trusted server-side PostgreSQL connection in `DATABASE_URL`. The API performs workspace authorization itself and RLS remains defense-in-depth for browser/client access through Supabase.
-
-## Gemini and BYOK
-
-There are two supported modes:
-
-- Managed: configure `GEMINI_API_KEY` on the server.
-- BYOK: workspace owner/admin enters a Gemini key in Settings. It is encrypted with Fernet before storage and only a key hint is returned.
-
-Generate the Fernet key with:
-
-```bash
-python scripts/generate_fernet_key.py
+```text
+Upload
+ -> validate type/size/signature
+ -> optional ClamAV scan
+ -> Supabase Storage
+ -> document/version/job rows
+ -> Redis queue
+ -> RQ worker
+ -> page-aware parse
+ -> smart chunks
+ -> selected embedding provider
+ -> pgvector
+ -> ready
 ```
 
-Never commit that key or customer provider keys.
+Observed job states:
+
+```text
+queued -> extracting -> chunking -> embedding -> ready
+```
+
+Failures are persisted as `failed` with an error message rather than being left silently queued.
+
+## Search and citations
+
+Hybrid retrieval combines PostgreSQL full-text search with cosine vector similarity. Retrieval is always workspace-scoped and can be narrowed to knowledge bases/documents.
+
+Citation metadata comes from database chunk/document/page records, not from an LLM. A citation can therefore open the exact supporting chunk.
 
 ## OCR
 
-Enable only when Tesseract is installed:
+OCR is optional. Install the Python OCR dependencies and Tesseract with the required language packs, then configure:
 
-```bash
-pip install -e '.[ocr]'
-```
-
-Install Tesseract with English and Nepali language packs, then set:
-
-```text
+```env
 OCR_ENABLED=true
+TESSERACT_CMD=
 ```
 
-Text-native PDF pages use PyMuPDF. Pages with very little extractable text fall back to OCR.
+Text-native PDF pages use PyMuPDF. Low-text pages can fall back to OCR when enabled.
 
 ## Malware scanning
 
-Start ClamAV with:
+ClamAV support is already wired into uploads. Start the security profile:
 
 ```bash
 docker compose --profile security up --build
 ```
 
-Then enable:
+Then configure:
 
-```text
+```env
 MALWARE_SCAN_ENABLED=true
 CLAMAV_HOST=clamav
+CLAMAV_PORT=3310
 ```
 
-Uploads are rejected when ClamAV reports malware.
-
-## API documentation
-
-When running:
+## Health and API docs
 
 ```text
+GET /health
+GET /ready
 /api/docs
 /api/openapi.json
 ```
 
-## Tests and checks
+`/ready` checks critical runtime dependencies such as PostgreSQL and Redis.
+
+## Tests
 
 ```bash
 python -m pytest -q
 python -m compileall -q apps packages
 node --check frontend/app.js
-python scripts/smoke_test.py
+```
+
+Before production deployment, also run an end-to-end test:
+
+```text
+Supabase login
+ -> workspace/RBAC
+ -> knowledge base
+ -> upload
+ -> Redis
+ -> RQ worker
+ -> parse
+ -> local embedding
+ -> pgvector
+ -> /api/search
+ -> evidence/citation
+ -> optional local/Gemini chat
 ```
 
 ## Security boundaries
 
-- Browser receives only the Supabase publishable key; server secrets stay server-side.
-- Every resource is workspace-scoped in backend authorization.
-- RLS is enabled across user-visible tables.
-- Customer Gemini keys are encrypted and never returned raw.
-- File extension, MIME, magic signature, size and optional malware checks run before ingestion.
-- Retrieved document content is treated as untrusted evidence, not model instructions.
-- Chat quotas and rate limits reduce provider abuse.
-- Audit logs record workspace-sensitive changes without storing provider secrets.
-
-## Production deployment checklist
-
-Before a real customer launch: use Supabase auth/storage, use Gemini rather than mock mode, enable HTTPS, set a real encryption key, use managed Redis/Postgres, configure backups/PITR, configure log/metric collection, run tenant-isolation security tests, run load tests, test restoration, and enable OCR/malware scanning if your threat model requires them.
-
-See `docs/ARCHITECTURE.md` and `docs/BUILD_STATUS.md` for implementation details.
+- Authentication comes from verified Supabase JWTs.
+- Every resource is workspace-scoped server-side.
+- RLS remains defense-in-depth on Supabase tables.
+- Provider secrets are backend-only and workspace Gemini BYOK keys are encrypted.
+- Uploaded files are validated before ingestion.
+- Retrieved document text is untrusted evidence, never system instructions.
+- Search-only works even with no generative LLM configured.
+- Invalid AI provider combinations fail at application startup instead of silently selecting another provider.
