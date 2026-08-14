@@ -11,6 +11,45 @@
 <body>
   <div id="toast" class="toast hidden"></div>
 
+  <!-- Public landing page for logged-out visitors -->
+  <section id="view-landing" class="view landing-view">
+    <div class="hero">
+      <div>
+        <span class="kicker">DocuQuery</span>
+        <h1>Ask your documents with evidence.</h1>
+        <p class="muted">Get precise answers grounded in your PDFs, DOCX and text files — with clickable citations back to the source.</p>
+        <p style="margin-top:16px;display:flex;gap:8px">
+          <button id="landingGetStartedBtn" class="primary">Get started</button>
+          <button id="landingLearnMoreBtn" class="ghost">Learn more</button>
+        </p>
+      </div>
+      <div>
+        <div class="card" style="max-width:520px;padding:16px">
+          <h3>Try DocuQuery</h3>
+          <p class="muted">Sign in to create a workspace, upload documents and start asking grounded questions.</p>
+        </div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:28px">
+      <div class="panel-head"><div><h3>How it works</h3><p class="muted">From document to answer in four simple steps.</p></div></div>
+      <div class="cards" style="display:flex;gap:12px;margin-top:12px">
+        <article class="card"><h4>1. Upload</h4><p class="muted">Add PDFs, DOCX or TXT files. Optionally OCR scanned docs.</p></article>
+        <article class="card"><h4>2. Index</h4><p class="muted">Documents are chunked, indexed with vector + text retrieval and reranked.</p></article>
+        <article class="card"><h4>3. Ask</h4><p class="muted">Pose questions to your workspace — queries search governed knowledge bases.</p></article>
+        <article class="card"><h4>4. Verify</h4><p class="muted">Answers include clickable citations you can open and inspect.</p></article>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <div class="panel-head"><div><h3>Key features</h3><p class="muted">Built from the codebase — no marketing fiction.</p></div></div>
+      <div class="cards" style="display:flex;gap:12px;margin-top:12px">
+        <article class="card"><h4>Grounded answers</h4><p class="muted">Answers cite source chunks and let you inspect the original text.</p></article>
+        <article class="card"><h4>Workspaces & governance</h4><p class="muted">Organize knowledge bases with role-based access and audit trails.</p></article>
+        <article class="card"><h4>Hybrid retrieval</h4><p class="muted">Vector + full-text retrieval with reranking for precise evidence.</p></article>
+        <article class="card"><h4>Bring-your-own key</h4><p class="muted">Encrypt and store provider keys per workspace, or use a managed key.</p></article>
+      </div>
+    </div>
+  </section>
+
   <section id="authScreen" class="auth-screen hidden">
     <div class="auth-card">
       <div class="brand large"><span>DQ</span><div><b>DocuQuery</b><small>Document Intelligence</small></div></div>
