@@ -80,9 +80,19 @@ async def ask(session_id: str, body: AskRequest, request:Request, principal: Pri
     await require_workspace_role(workspace_id,principal,db,{"owner", "admin", "editor", "viewer"})
     await enforce_rate_limit(principal.user_id,"ask")
     await ensure_question_quota(db,workspace_id)
-    api_key=None if settings.ai_mode == 'mock' else await resolve_gemini_key(db,workspace_id)
 
-    query_embedding = await create_embedder(api_key).embed(body.question)
+    needs_gemini = (
+        settings.embedding_provider.lower() == "gemini"
+        or settings.chat_provider.lower() == "gemini"
+    )
+    api_key = await resolve_gemini_key(db, workspace_id) if needs_gemini else None
+
+    embedder = create_embedder(api_key)
+    embed_query = getattr(embedder, "embed_query", embedder.embed)
+    query_embedding = await embed_query(body.question)
+    if len(query_embedding) != settings.embedding_dimension:
+        raise HTTPException(503, "Embedding provider returned an incompatible vector dimension")
+
     sources=(await db.execute(text("SELECT source_type,source_id FROM chat_session_sources WHERE session_id=:s"),{"s": session_id})).mappings().all()
     chunks = await hybrid_retrieve(db,workspace_id,query_embedding,body.question,list(sources),limit=8)
     context, citations = build_context(chunks)
@@ -91,15 +101,19 @@ async def ask(session_id: str, body: AskRequest, request:Request, principal: Pri
     await db.execute(text("INSERT INTO messages(id,session_id,user_id,role,content,status) VALUES(:id,:s,:u,'user',:c,'completed')"),{"id":user_message_id,"s":session_id,"u":principal.user_id,"c":body.question})
     assistant_message_id = str(uuid.uuid4())
     await db.execute(text("INSERT INTO messages(id,session_id,user_id,role,content,status) VALUES(:id,:s,:u,'assistant','','generating')"),{"id": assistant_message_id, "s": session_id, "u": principal.user_id})
+
+    llm = create_llm(api_key)
+    provider = getattr(llm, "provider", settings.chat_provider.lower())
+    model = getattr(llm, "model", "unknown")
     usage_id=str(uuid.uuid4())
-    await db.execute(text("INSERT INTO usage_events(id,workspace_id,user_id,operation,provider,model,input_tokens) VALUES(:id,:w,:u,'chat_question','gemini',:m,:t)"),{"id":usage_id,"w":workspace_id,"u":principal.user_id,"m":create_llm(api_key).model,"t":max(1,(len(body.question)+len(context))//4)})
-    await write_audit(db,workspace_id=workspace_id,actor_user_id=principal.user_id,action="chat.question",resource_type="chat_session",resource_id=session_id,request_id=request.state.request_id,ip=request.client.host if request.client else None)
+    await db.execute(text("INSERT INTO usage_events(id,workspace_id,user_id,operation,provider,model,input_tokens) VALUES(:id,:w,:u,'chat_question',:p,:m,:t)"),{"id":usage_id,"w":workspace_id,"u":principal.user_id,"p":provider,"m":model,"t":max(1,(len(body.question)+len(context))//4)})
+    await write_audit(db,workspace_id=workspace_id,actor_user_id=principal.user_id,action="chat.question",resource_type="chat_session",resource_id=session_id,request_id=request.state.request_id,ip=request.client.host if request.client else None,metadata={"embedding_provider":settings.embedding_provider,"chat_provider":settings.chat_provider})
     await db.commit()
 
     async def stream():
         parts: list[str] = []
         try:
-            async for token in create_llm(api_key).stream_answer(body.question, context):
+            async for token in llm.stream_answer(body.question, context):
                 parts.append(token)
                 yield f"data: {json.dumps({'type': 'token', 'text': token})}\n\n"
             answer = "".join(parts)
@@ -108,11 +122,12 @@ async def ask(session_id: str, body: AskRequest, request:Request, principal: Pri
                 await db.execute(text("INSERT INTO message_citations(id,message_id,chunk_id,citation_order) VALUES(:id,:m,:c,:o)"),{"id":str(uuid.uuid4()),"m":assistant_message_id,"c":citation["chunk_id"],"o":order})
             await db.execute(text("UPDATE usage_events SET output_tokens=:t WHERE id=:id"),{"t":max(1,len(answer)//4),"id":usage_id})
             await db.commit()
-            yield f"data: {json.dumps({'type':'citations','items':citations,'message_id':assistant_message_id})}\n\n"
+            yield f"data: {json.dumps({'type':'citations','items':citations,'message_id':assistant_message_id,'mode':settings.app_mode,'chat_provider':settings.chat_provider})}\n\n"
             yield 'data: {"type":"done"}\n\n'
-        except Exception:
+        except Exception as exc:
+            await db.rollback()
             await db.execute(text("UPDATE messages SET status='failed' WHERE id=:id"),{"id":assistant_message_id})
             await db.commit()
-            yield f"data: {json.dumps({'type':'error','message':'Generation failed'})}\n\n"
+            yield f"data: {json.dumps({'type':'error','message':f'Answer generation failed: {str(exc)[:240]}'})}\n\n"
 
     return StreamingResponse(stream(),media_type="text/event-stream",headers={"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
