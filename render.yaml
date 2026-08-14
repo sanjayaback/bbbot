@@ -49,9 +49,9 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_CHAT_MODEL
-        value: gemini-3-flash-preview
+        value: gemini-3.6-flash
       - key: GEMINI_EMBED_MODEL
-        value: gemini-embedding-001
+        value: gemini-embedding-2
       - key: EMBEDDING_DIMENSION
         value: "768"
       - key: MAX_UPLOAD_MB
@@ -96,9 +96,9 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_CHAT_MODEL
-        value: gemini-3-flash-preview
+        value: gemini-3.6-flash
       - key: GEMINI_EMBED_MODEL
-        value: gemini-embedding-001
+        value: gemini-embedding-2
       - key: EMBEDDING_DIMENSION
         value: "768"
       - key: OCR_ENABLED
