@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     gemini_chat_model: str = "gemini-3.6-flash"
     gemini_embed_model: str = "gemini-embedding-2"
     embedding_dimension: int = 768
+    retrieval_min_score: float = 0.35
     credential_encryption_key: str = ""
 
     max_upload_mb: int = 20
