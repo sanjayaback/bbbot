@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from apps.api.middleware import request_id_middleware
-from apps.api.routers import health, workspaces, documents, chat, configuration, settings as settings_router, activity, maintenance
+from apps.api.routers import health, workspaces, documents, chat, configuration, settings as settings_router, activity, maintenance, search
 
 app=FastAPI(title="DocuQuery API",version="1.1.0",docs_url="/api/docs",openapi_url="/api/openapi.json")
 app.middleware("http")(request_id_middleware)
@@ -18,6 +18,7 @@ app.include_router(health.router)
 app.include_router(configuration.router)
 app.include_router(workspaces.router)
 app.include_router(documents.router)
+app.include_router(search.router)
 app.include_router(chat.router)
 app.include_router(settings_router.router)
 app.include_router(activity.router)
