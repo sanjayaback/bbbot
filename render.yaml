@@ -1,0 +1,107 @@
+services:
+  - type: keyvalue
+    name: docuquery-redis
+    region: singapore
+    plan: starter
+    maxmemoryPolicy: noeviction
+
+  - type: web
+    name: docuquery-api
+    runtime: python
+    region: singapore
+    plan: starter
+    buildCommand: pip install .
+    startCommand: uvicorn apps.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /ready
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: AUTH_MODE
+        value: supabase
+      - key: AI_MODE
+        value: gemini
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: docuquery-redis
+          property: connectionString
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_BASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_JWKS_URL
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: CREDENTIAL_ENCRYPTION_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_CHAT_MODEL
+        value: gemini-3-flash-preview
+      - key: GEMINI_EMBED_MODEL
+        value: gemini-embedding-001
+      - key: EMBEDDING_DIMENSION
+        value: "768"
+      - key: MAX_UPLOAD_MB
+        value: "20"
+      - key: OCR_ENABLED
+        value: "false"
+      - key: MALWARE_SCAN_ENABLED
+        value: "false"
+
+  - type: worker
+    name: docuquery-worker
+    runtime: python
+    region: singapore
+    plan: starter
+    buildCommand: pip install .
+    startCommand: rq worker docuquery --url "$REDIS_URL"
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: AUTH_MODE
+        value: supabase
+      - key: AI_MODE
+        value: gemini
+      - key: STORAGE_BACKEND
+        value: supabase
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: docuquery-redis
+          property: connectionString
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: CREDENTIAL_ENCRYPTION_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_CHAT_MODEL
+        value: gemini-3-flash-preview
+      - key: GEMINI_EMBED_MODEL
+        value: gemini-embedding-001
+      - key: EMBEDDING_DIMENSION
+        value: "768"
+      - key: OCR_ENABLED
+        value: "false"
+      - key: MALWARE_SCAN_ENABLED
+        value: "false"
